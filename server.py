@@ -33,6 +33,10 @@ class ChatThread(threading.Thread):
                 self.destiny.conn.send(text)
             except Exception as e:
                 print(f'[!] Error: {e}')
+                self.destiny.conn.send(f'[+] {self.source.user_name} disconnected from chat!\n[+] Waiting for another user...'.encode('utf-8'))
+                lock.acquire()
+                clients.append(self.destiny)
+                lock.release()
                 break
 
 class ConnectionHandlerThread(threading.Thread):
