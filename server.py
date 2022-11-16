@@ -30,8 +30,12 @@ class ChatThread(threading.Thread):
         while True:
             try:
                 text = self.source.conn.recv(1024)
-                self.destiny.conn.send(text)
-            except Exception as e:
+                try:
+                    self.destiny.conn.send(text)
+                except ConnectionResetError as e:
+                    print(f'[!] Error: {e}')
+                    
+            except ConnectionResetError as e:
                 print(f'[!] Error: {e}')
                 self.destiny.conn.send(f'[+] {self.source.user_name} disconnected from chat!\n[+] Waiting for another user...'.encode('utf-8'))
                 lock.acquire()
@@ -82,8 +86,8 @@ def login_user(conn, addr):
 def start_server():
     print(f'[+] Initializing server -> ({SERVER_HOST}, {SERVER_PORT})')
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    connection_handler = threading.Thread(target=connection_handler)
-    connection_handler.start()
+    connection_handler_thread = threading.Thread(target=connection_handler)
+    connection_handler_thread.start()
     try:
         server_socket.bind((SERVER_HOST, SERVER_PORT))
     except socket.error as msg:
