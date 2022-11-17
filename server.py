@@ -69,6 +69,8 @@ def connection_handler():
                 print(f'[+] Chat established between {last_client} && {random_client}')
                 thread1 = ChatThread(last_client, random_client)
                 thread2 = ChatThread(random_client, last_client)
+                thread1.daemon = True
+                thread2.daemon = True
                 thread1.start()
                 thread2.start()
     
@@ -90,6 +92,7 @@ def start_server():
     print(f'[+] Initializing server -> ({SERVER_HOST}, {SERVER_PORT})')
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     connection_handler_thread = threading.Thread(target=connection_handler)
+    connection_handler_thread.daemon = True
     connection_handler_thread.start()
     try:
         server_socket.bind((SERVER_HOST, SERVER_PORT))
@@ -102,6 +105,7 @@ def start_server():
             conn, addr = server_socket.accept()
             print('[+] Connection with %s : %s ' %(addr[0], str(addr[1])))
             thread = threading.Thread(target=login_user, args=(conn, addr))
+            thread.daemon = True
             thread.start()  
     finally:
         server_socket.close()
