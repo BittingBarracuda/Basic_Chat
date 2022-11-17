@@ -6,8 +6,13 @@ SERVER_PORT = 8080
 
 def listen_to_server(client_socket):
     while True:
-        text = client_socket.recv(1024).decode()
-        print(text)
+        try:
+            text = client_socket.recv(1024).decode()
+            if text != '<PING>':
+                print(text)
+        except Exception as e:
+            print(f'[!] Error: {e}')
+            break
 
 def init_chat():
     user_name = input('[+] Type in your username: ')
@@ -22,6 +27,8 @@ def init_chat():
             client_socket.send(f'{user_name}> {text}'.encode('utf-8'))
     except Exception as e:
         print(f'[*] Error connecting to server: {e}')
+    finally:
+        client_socket.close()
 
 if __name__ == "__main__":
     init_chat()

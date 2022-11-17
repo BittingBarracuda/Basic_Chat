@@ -25,28 +25,35 @@ class ChatThread(threading.Thread):
         self.source = source
         self.destiny = destiny
 
+    @staticmethod
+    def __check_connection(connection):
+        try:
+            connection.send(b'<PING>')
+            return True
+        except:
+            return False
+
     def run(self):
         self.destiny.conn.send(f'[+] Connected with {self.source.user_name}!'.encode('utf-8'))
         while True:
             try:
                 text = self.source.conn.recv(1024)
-                try:
-                    self.destiny.conn.send(text)
-                except ConnectionResetError as e:
-                    print(f'[!] Error: {e}')
-                    
-            except ConnectionResetError as e:
+                self.destiny.conn.send(text)
+            except Exception as e:
                 print(f'[!] Error: {e}')
-                self.destiny.conn.send(f'[+] {self.source.user_name} disconnected from chat!\n[+] Waiting for another user...'.encode('utf-8'))
-                lock.acquire()
-                clients.append(self.destiny)
-                lock.release()
+                if not ChatThread.__check_connection(self.source.conn):
+                    if ChatThread.__check_connection(self.destiny.conn):
+                        self.destiny.conn.send(f'[!] User {self.source.user_name} disconnected!\n[+] Waiting for another user to connect...'.encode('utf-8'))
+                        lock.acquire()
+                        clients.append(self.destiny)
+                        lock.release()
+                else:
+                    self.source.conn.send(f'[!] User {self.destiny.user_name} disconnected!\n[+] Waiting for another user to connect...'.encode('utf-8'))
+                    lock.acquire()
+                    clients.append(self.source)
+                    lock.release()
                 break
 
-# class ConnectionHandlerThread(threading.Thread):
-#     def __init__(self):
-#         super().__init__()
-    
 def connection_handler():
     while True:
         with waiting_condition:
@@ -64,24 +71,20 @@ def connection_handler():
                 thread2 = ChatThread(random_client, last_client)
                 thread1.start()
                 thread2.start()
-
-# class LogInThread(threading.Thread):
-#     def __init__(self, conn, addr):
-#         super().__init__()
-#         self.conn = conn
-#         self.addr = addr
     
 def login_user(conn, addr):
-    # self.conn.send('Type in your new nickname: '.encode('utf-8'))
-    resp = conn.recv(1024).decode()
-    lock.acquire()
-    client = Client(conn, addr, resp)
-    clients.append(client)
-    lock.release()
-    with waiting_condition:
-        waiting_condition.notify()
-    print(f'[+] User {client} connected to the server!')
-    conn.send(f'[+] Successfully connected to the server!\n[+] Waiting for another user to connect...'.encode('utf-8'))
+    try:
+        resp = conn.recv(1024).decode()
+        lock.acquire()
+        client = Client(conn, addr, resp)
+        clients.append(client)
+        lock.release()
+        with waiting_condition:
+            waiting_condition.notify()
+        print(f'[+] User {client} connected to the server!')
+        conn.send(f'[+] Successfully connected to the server!\n[+] Waiting for another user to connect...'.encode('utf-8'))
+    except Exception as e:
+        print(f'[!] Error: {e}')
 
 def start_server():
     print(f'[+] Initializing server -> ({SERVER_HOST}, {SERVER_PORT})')
